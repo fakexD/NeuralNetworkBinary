@@ -1,0 +1,77 @@
+ # Data reading 
+> getwd()
+[1] "C:/Users/nayan/Documents"
+> data <- read.csv("binary.csv", header = TRUE)
+> str(data)
+'data.frame':	400 obs. of  4 variables:
+ $ admit: int  0 1 1 1 0 1 1 0 1 0 ...
+ $ gre  : int  380 660 800 640 520 760 560 400 540 700 ...
+ $ gpa  : num  3.61 3.67 4 3.19 2.93 3 2.98 3.08 3.39 3.92 ...
+ $ rank : int  3 3 1 4 4 2 1 2 3 2 ...
+> 
+> # Min-Max Normalization (normalize all values between 0 and 1)
+> data$gre <- (data$gre - min(data$gre))/(max(data$gre) - min(data$gre))
+> data$gpa <- (data$gpa - min(data$gpa))/(max(data$gpa) - min(data$gpa))
+> data$rank <- (data$rank - min(data$rank))/(max(data$rank)-min(data$rank))
+> 
+> # Data Partition into training and testing 
+> set.seed(222)
+> ind <- sample(2, nrow(data), replace = TRUE, prob = c(0.7, 0.3))
+> training <- data[ind==1,]
+> testing <- data[ind==2,]
+> 
+> # Neural Networks
+> library(neuralnet)
+> set.seed(333)
+> n <- neuralnet(admit~.,
++                data = training,
++                hidden = 1,
++                err.fct = "ce",
++                linear.output = FALSE)
+> plot(n)
+> 
+> # Prediction for the first row of training with neural model 
+> output <- compute(n, training[,-1])
+> head(output$net.result)
+       [,1]
+2 0.3779477
+3 0.6622788
+4 0.1487507
+7 0.3433429
+8 0.1924163
+9 0.2396130
+> head(training[1,])
+  admit       gre       gpa      rank
+2     1 0.7586207 0.8103448 0.6666667
+> 
+> # Node Output for the first row of training set, Calculations with Sigmoid Activation Function
+> in4 <- 0.0455 + (0.82344*0.7586206897) + (1.35186*0.8103448276) + (-0.87435*0.6666666667)
+> out4 <- 1/(1+exp(-in4))
+> in5 <- -7.06125 +(8.5741*out4)
+> out5 <- 1/(1+exp(-in5))
+> 
+> # Confusion Matrix & Misclassification Error with training data
+> output <- compute(n, training[,-1])
+> p1 <- output$net.result
+> pred1 <- ifelse(p1>0.5, "actual", "predicted")
+> tab1 <- table(pred1, training$admit)
+> tab1
+           
+pred1         0   1
+  actual     17  26
+  predicted 172  66
+> 1-sum(diag(tab1))/sum(tab1)
+[1] 0.7046263
+> 
+> # Confusion Matrix & Misclassification Error with testing data
+> output <- compute(n, testing[,-1])
+> p2 <- output$net.result
+> pred2 <- ifelse(p2>0.5, "actual","predicted" )
+> tab2 <- table(pred2, testing$admit)
+> tab2
+           
+pred2        0  1
+  actual     8  8
+  predicted 76 27
+> 1-sum(diag(tab2))/sum(tab2)
+[1] 0.7058824
